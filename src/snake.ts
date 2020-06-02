@@ -111,6 +111,7 @@ export class Playground {
       tableBody.appendChild(tableRow);
     }
     table.appendChild(tableBody);
+    table.setAttribute("style", "margin: 0 auto; border: 2px solid")
     this._playgroundDiv.appendChild(table);
   }
 
@@ -137,10 +138,6 @@ export class Playground {
   }
 
   drawFood() {
-    //
-  }
-
-  findNewTailPosition() {
     //
   }
 
@@ -172,7 +169,6 @@ export class Playground {
 
     // moveTail
     const tailPosition = this._snake.tailPosition;
-    this.markField(tailPosition, UNMARKED_FIELD);
     this._fields[tailPosition.y][tailPosition.x] = 0; // get tail position and unmark it, leave no traces behind
     let [shiftX, shiftY] = this.getCoordinateShiftFunctions(tailPosition.direction); 
     let [newX, newY] = [shiftX(tailPosition.x), shiftY(tailPosition.y)];
@@ -180,24 +176,35 @@ export class Playground {
  
     // moveHead
     const headPosition = this._snake.headPosition;
-    this.markField(headPosition, MARKED_FIELD);
     this._fields[headPosition.y][headPosition.x] = this._snake.direction;
     [shiftX, shiftY] = this.getCoordinateShiftFunctions(this._snake.direction);
     [newX, newY] = [shiftX(headPosition.x), shiftY(headPosition.y)];
-    this._snake.headPosition = new Field(
-      newX, newY, this._snake.direction
-    );
+    this.checkBorders(newX, newY);
+    this._snake.headPosition = new Field(newX, newY, this._snake.direction);
+    this.markField(tailPosition, UNMARKED_FIELD);
+    this.markField(headPosition, MARKED_FIELD);
     this.markField(this._snake.headPosition, HEAD_FIELD);
+  }
+
+  checkBorders(x:number , y: number) {
+    if (x < 0 || x > this._playgroundSize-1 || y < 0 || y > this._playgroundSize-1) {
+      throw new Error("Out of borders");
+    }
   }
 
 }
 
-const TIME_SLICE_PERIOD: number = 3000;
+const TIME_SLICE_PERIOD: number = 60;
 
 export class GameRunner {
 
   private _timeSlicePeriod: number = TIME_SLICE_PERIOD; // miliseconds
-  private _gameRunning: boolean = false;
+  private _gameRunning: boolean = true;
+  private _playground: Playground;
+
+  constructor (playground: Playground) {
+    this._playground = playground;
+  }
 
   start() {
     this._gameRunning = true;
@@ -225,9 +232,12 @@ export class GameRunner {
 
   timeSlice (): any {
     if (this._gameRunning) {
-      // moveSnake
+      try {
+        this._playground.moveSnake()
+      } catch (error) {
+        this.pause()
+      }
     }
-    console.log('timeSlice function')
   }
 
 }
