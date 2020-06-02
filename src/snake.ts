@@ -4,10 +4,10 @@ const MARKED_FIELD = "black";
 const UNMARKED_FIELD = "silver";
 const HEAD_FIELD = "blue";
 const INITIAL_SNAKE_LENGTH: number = 3;
-const UP = "UP";
-const DOWN = "DOWN";
-const LEFT = "LEFT";
-const RIGHT = "RIGHT";
+export const UP = "UP";
+export const DOWN = "DOWN";
+export const LEFT = "LEFT";
+export const RIGHT = "RIGHT";
 
 type DirectionsType = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
@@ -89,16 +89,19 @@ export class Playground {
   private _playgroundDiv: any = document.getElementById('playground');
   private _fields = Array(20).fill(0).map(() => { return Array(20).fill(0)});
   private _snake: Snake;
+  private _table: HTMLElement;
 
   constructor(snake: Snake) {
     this._snake = snake;
     console.log(this._fields);
   }
 
-  drawPlayground() {
-    //
+  get snake () {
+    return this._snake;
+  }
 
-    const table = document.createElement('table');
+  drawPlayground() {
+    this._table = document.createElement('table');
     const tableBody = document.createElement('tbody');
     for (const row in this._fields) {
       const tableRow = document.createElement('tr');
@@ -110,9 +113,17 @@ export class Playground {
       }
       tableBody.appendChild(tableRow);
     }
-    table.appendChild(tableBody);
-    table.setAttribute("style", "margin: 0 auto; border: 2px solid")
-    this._playgroundDiv.appendChild(table);
+    this._table.appendChild(tableBody);
+    this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+    this._playgroundDiv.appendChild(this._table);
+  }
+
+  resetPlayground() {
+    this._snake = new Snake();
+    this._fields = Array(20).fill(0).map(() => { return Array(20).fill(0)});
+    this._table.remove();
+    this.drawPlayground();
+    this.drawSnake();
   }
 
   markField(field: Field, type: string) {
@@ -135,6 +146,23 @@ export class Playground {
       this._fields[field.y][field.x] = this._snake.direction;
     }
     this._snake.tailPosition = field;
+  }
+
+  flashTableBorder() {
+    let i = 5;
+    let interval = setInterval(() => {
+      console.log('intervalll');
+      if (i%2) {
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid red");
+      } else {
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+      }
+      if (i<0) {
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+        clearInterval(interval);
+      }
+      i--;
+    }, 300)
   }
 
   drawFood() {
@@ -194,12 +222,12 @@ export class Playground {
 
 }
 
-const TIME_SLICE_PERIOD: number = 60;
+const TIME_SLICE_PERIOD: number = 90;
 
 export class GameRunner {
 
   private _timeSlicePeriod: number = TIME_SLICE_PERIOD; // miliseconds
-  private _gameRunning: boolean = true;
+  private _gameRunning: boolean = false;
   private _playground: Playground;
 
   constructor (playground: Playground) {
@@ -207,19 +235,77 @@ export class GameRunner {
   }
 
   start() {
+    this.enableSnakeControls();
     this._gameRunning = true;
   }
 
   pause() {
+    this.disableSnakeControls();
     this._gameRunning = false;
   }
 
   reset() {
-    this._gameRunning = false;
+    this._playground.resetPlayground();
+    this.enableGameControls();
   }
 
   gameover() {
+    this.disableGameControls();
+    this.disableSnakeControls();
     this._gameRunning = false;
+    setTimeout(() => {
+      this.reset();
+    }, 2000);
+    this._playground.flashTableBorder();
+  }
+
+  spaceKeyListener = (ev: KeyboardEvent) => {
+    switch(ev.keyCode) {
+      case 32: {
+        if (this.gameRunning) {
+          this.pause();
+        } else {
+          this.start();
+        }
+      }
+    }
+  }
+
+  controlKeysListener = (ev: KeyboardEvent) => {
+    switch(ev.keyCode) {
+      case 105: {
+        this._playground.snake.direction = UP;
+        break;
+      }
+      case 107: {
+        this._playground.snake.direction = DOWN;
+        break;
+      }
+      case 106: {
+        this._playground.snake.direction = LEFT;
+        break;
+      }
+      case 108: {
+        this._playground.snake.direction = RIGHT;
+        break;
+      }
+    }
+  }
+
+  enableGameControls () {
+    document.addEventListener('keypress', this.spaceKeyListener);
+  }
+
+  disableGameControls () {
+    document.removeEventListener('keypress', this.spaceKeyListener);
+  }
+
+  enableSnakeControls () {
+    document.addEventListener('keypress', this.controlKeysListener);
+  }
+
+  disableSnakeControls () {
+    document.removeEventListener('keypress', this.controlKeysListener);
   }
 
   get timeSlicePeriod() {
@@ -235,11 +321,9 @@ export class GameRunner {
       try {
         this._playground.moveSnake()
       } catch (error) {
-        this.pause()
+        this.gameover();
       }
     }
   }
 
 }
-
-const snake = new Snake();
