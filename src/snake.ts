@@ -1,8 +1,8 @@
 
 const PLAYGROUND_SIZE = 20;
-const MARKED_FIELD = "black";
-const UNMARKED_FIELD = "silver";
-const HEAD_FIELD = "blue";
+const MARKED_FIELD = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
+const UNMARKED_FIELD = "height: 20px; width: 20px; background-color: silver;";
+const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-radius: 4px";
 const INITIAL_SNAKE_LENGTH: number = 3;
 export const UP = "UP";
 export const DOWN = "DOWN";
@@ -48,14 +48,27 @@ interface IField {
   coordinates: Coordinates
 }
 
+class Field implements IField {
+
+  private _coordinates: Coordinates;
+
+  constructor (coordinates: Coordinates=new Coordinates()) {
+    this._coordinates = coordinates;
+  }
+
+  get coordinates () {
+    return this._coordinates;
+  }
+
+}
+
 interface ISnakeBodyField extends IField {
   direction: DirectionsType
   bodyType: any
 }
 
-class SnakeBodyField implements ISnakeBodyField {
+class SnakeBodyField extends Field implements ISnakeBodyField {
 
-  private _coordinates: Coordinates;
   private _bodyType: any;
   private _direction: DirectionsType;
 
@@ -64,11 +77,9 @@ class SnakeBodyField implements ISnakeBodyField {
     bodyType: any = null,
     direction: DirectionsType = "NONE"
   ) {
-
-  }
-
-  get coordinates () {
-    return this._coordinates;
+    super(coordinates);
+    this._bodyType = bodyType;
+    this._direction = direction;
   }
 
   get bodyType () {
@@ -105,48 +116,23 @@ class FoodField implements IFoodField {
   }
 }
 
-class Field {
-
-  private _x: number;
-  private _y: number;
-  private _direction: DirectionsType;
-
-  constructor (x: number = 0, y: number = 0, direction: DirectionsType=RIGHT) {
-    this._x = x;
-    this._y = y;
-    this._direction = direction;
-  }
-
-  get x () {
-    return this._x;
-  }
-
-  get y () {
-    return this._y;
-  }
-
-  get direction () {
-    return this._direction;
-  }
-
+interface ISnake {
+  length: number
+  direction: DirectionsType
+  headPosition: SnakeBodyField
 }
 
-export class Snake {
+export class Snake implements ISnake{
 
   private _length: number = INITIAL_SNAKE_LENGTH;
   private _direction: DirectionsType = <DirectionsType>[UP, DOWN, LEFT, RIGHT][Math.floor(Math.random()*4)];
-  private _headPosition: Field = new Field(
-    Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
-    Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
-    this._direction
-  );
-  private _headPosition2: SnakeBodyField = new SnakeBodyField(
+  private _headPosition: SnakeBodyField = new SnakeBodyField(
     new Coordinates(
       Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
       Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length )
     ), HEAD_FIELD
   )
-  private _tailPosition: Field;
+  private _tailPosition: SnakeBodyField;
 
   get length() {
     return this._length;
@@ -160,7 +146,7 @@ export class Snake {
     return this._headPosition;
   }
 
-  set headPosition (headPosition: Field) { 
+  set headPosition (headPosition: SnakeBodyField) { 
     this._headPosition = headPosition;
   }
 
@@ -168,7 +154,7 @@ export class Snake {
     return this._tailPosition;
   }
 
-  set tailPosition (field: Field) {
+  set tailPosition (field: SnakeBodyField) {
     this._tailPosition = field;
   }
 
@@ -176,7 +162,7 @@ export class Snake {
     return this._direction;
   }
 
-  set direction (direction) {
+  set direction (direction: DirectionsType) {
     this._direction = direction;
   }
 
@@ -190,17 +176,29 @@ export class Playground {
 
   private _playgroundSize: number = PLAYGROUND_SIZE;
   private _playgroundDiv: any = document.getElementById('playground');
-  private _fields = Array(20).fill(0).map(() => { return Array(20).fill(0)});
+  private _fields: (SnakeBodyField | Field) [][];
   private _snake: Snake;
   private _table: HTMLElement;
 
   constructor(snake: Snake) {
     this._snake = snake;
+    this._fields = this.initializeFields();
     console.log(this._fields);
   }
 
   get snake () {
     return this._snake;
+  }
+
+  private initializeFields () {
+    return Array(20).fill(0)
+    .map((row,i) => {
+      return Array(20).fill(0)
+      .map((col,j) => {
+        const coordinates = new Coordinates(j, i);
+        return new Field(coordinates);
+      })
+    });
   }
 
   drawPlayground() {
@@ -223,30 +221,31 @@ export class Playground {
 
   resetPlayground() {
     this._snake = new Snake();
-    this._fields = Array(20).fill(0).map(() => { return Array(20).fill(0)});
+    this._fields = this.initializeFields();
     this._table.remove();
     this.drawPlayground();
     this.drawSnake();
   }
 
-  markField(field: Field, type: string) {
-    document.getElementById(field.x.toString() + "-" + field.y.toString())
-    .setAttribute("style", `height: 20px; width: 20px; background-color: ${type}`);
+  markField(coordinates: Coordinates, type: string) {
+    document.getElementById(coordinates.x.toString() + "-" + coordinates.y.toString())
+    .setAttribute("style", type);
   }
 
   drawSnake() {
     // head
-    const headPosition = this._snake.headPosition;
-    this.markField(headPosition, HEAD_FIELD);
-    this._fields[headPosition.y][headPosition.x] = this._snake.direction;
+    const headCoordinates = this._snake.headPosition.coordinates;
+    this.markField(headCoordinates, HEAD_FIELD);
+    this._fields[headCoordinates.y][headCoordinates.x] = new SnakeBodyField(headCoordinates, HEAD_FIELD, this._snake.direction);
 
     // body & tail
     let shiftX, shiftY, field;
     for (let i = 1; i < this._snake.length; i++) {
       [shiftX, shiftY] = this.getCoordinateShiftFunctions(this._snake.direction, true, i);
-      field = new Field( shiftX(headPosition.x), shiftY(headPosition.y), this._snake.direction );
-      this.markField(field, MARKED_FIELD);
-      this._fields[field.y][field.x] = this._snake.direction;
+      const bodyPartCoordinates = new Coordinates(shiftX(headCoordinates.x), shiftY(headCoordinates.y));
+      field = new SnakeBodyField( bodyPartCoordinates, MARKED_FIELD, this._snake.direction );
+      this.markField(field.coordinates, MARKED_FIELD);
+      this._fields[field.coordinates.y][field.coordinates.x] = field;
     }
     this._snake.tailPosition = field;
   }
@@ -300,26 +299,37 @@ export class Playground {
 
     // moveTail
     const tailPosition = this._snake.tailPosition;
-    this._fields[tailPosition.y][tailPosition.x] = 0; // get tail position and unmark it, leave no traces behind
+    this._fields[tailPosition.coordinates.y][tailPosition.coordinates.x] = new Field(tailPosition.coordinates); // get tail position and unmark it, leave no traces behind
     let [shiftX, shiftY] = this.getCoordinateShiftFunctions(tailPosition.direction); 
-    let [newX, newY] = [shiftX(tailPosition.x), shiftY(tailPosition.y)];
-    this._snake.tailPosition = new Field(newX, newY, this._fields[newY][newX]) // getShift functions, new coordinates, make nes tail Position
+    let [newX, newY] = [shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y)];
+    const newTailCoordinates = new Coordinates(shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y));
+    const newField = <SnakeBodyField>this._fields[newY][newX];
+    this._snake.tailPosition = new SnakeBodyField(newTailCoordinates, MARKED_FIELD, newField.direction) // getShift functions, new coordinates, make nes tail Position
  
     // moveHead
     const headPosition = this._snake.headPosition;
-    this._fields[headPosition.y][headPosition.x] = this._snake.direction;
+    this._fields[headPosition.coordinates.y][headPosition.coordinates.x] = new SnakeBodyField(headPosition.coordinates, MARKED_FIELD, this._snake.direction);
     [shiftX, shiftY] = this.getCoordinateShiftFunctions(this._snake.direction);
-    [newX, newY] = [shiftX(headPosition.x), shiftY(headPosition.y)];
+    [newX, newY] = [shiftX(headPosition.coordinates.x), shiftY(headPosition.coordinates.y)];
     this.checkBorders(newX, newY);
-    this._snake.headPosition = new Field(newX, newY, this._snake.direction);
-    this.markField(tailPosition, UNMARKED_FIELD);
-    this.markField(headPosition, MARKED_FIELD);
-    this.markField(this._snake.headPosition, HEAD_FIELD);
+    this.checkBodyHit(newX, newY);
+    const newHeadCoordinates = new Coordinates(newX, newY);
+    this._snake.headPosition = new SnakeBodyField(newHeadCoordinates, this._snake.direction);
+    this.markField(tailPosition.coordinates, UNMARKED_FIELD);
+    this.markField(headPosition.coordinates, MARKED_FIELD);
+    this.markField(this._snake.headPosition.coordinates, HEAD_FIELD);
   }
 
   checkBorders(x:number , y: number) {
     if (x < 0 || x > this._playgroundSize-1 || y < 0 || y > this._playgroundSize-1) {
       throw new Error("Out of borders");
+    }
+  }
+
+  checkBodyHit(x: number, y: number) {
+    const field = this._fields[y][x];
+    if (field instanceof SnakeBodyField) {
+      throw new Error("You hit yourself");
     }
   }
 
