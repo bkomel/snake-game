@@ -3,7 +3,7 @@ const PLAYGROUND_SIZE = 20;
 const MARKED_FIELD = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
 const UNMARKED_FIELD = "height: 20px; width: 20px; background-color: silver;";
 const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-radius: 2px";
-const FOOD_FIELD = "height: 20px; width: 20px; background-color: red; border-radius: 4px";
+const FOOD_FIELD = "height: 20px; width: 20px; background-color: red; border-radius: 15px";
 const BODY_AND_FOOD_FIELD = "height: 20px; width: 20px; background-color: #444; border-radius: 2px"
 const INITIAL_SNAKE_LENGTH: number = 3;
 export const UP = "UP";
@@ -94,23 +94,20 @@ class SnakeBodyField extends Field implements ISnakeBodyField {
 
 }
 
-interface IFoodField {
-  coordinates: Coordinates
+interface IFoodField extends Field {
   foodType: any
 }
 
-class FoodField implements IFoodField {
+class FoodField extends Field implements IFoodField {
 
-  private _coordinates: Coordinates
   private _foodType: any
 
   constructor (
-    coordinates: ICoordinates,
+    coordinates: Coordinates = new Coordinates(),
     foodType: any
-  ) {}
-
-  get coordinates () {
-    return this._coordinates;
+  ) {
+    super(coordinates);
+    this._foodType = foodType;
   }
 
   get foodType () {
@@ -185,7 +182,6 @@ export class Playground {
   constructor(snake: Snake) {
     this._snake = snake;
     this._fields = this.initializeFields();
-    console.log(this._fields);
   }
 
   get snake () {
@@ -256,7 +252,6 @@ export class Playground {
   flashTableBorder() {
     let i = 5;
     let interval = setInterval(() => {
-      console.log('intervalll');
       if (i%2) {
         this._table.setAttribute("style", "margin: 0 auto; border: 2px solid red");
       } else {
@@ -278,6 +273,7 @@ export class Playground {
         Math.floor(Math.random() * (this._playgroundSize - 1) )
       )
     } while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
+    this.setField(coordinates, new FoodField(coordinates, FOOD_FIELD));
     this.markField(coordinates, FOOD_FIELD);
   }
 
@@ -309,9 +305,11 @@ export class Playground {
     // head
     const _newHeadCoordinates = this.makeShiftedCoordinates(this._snake.headPosition.coordinates, this._snake.direction);
     this.checkBorderHit(_newHeadCoordinates);
-    this.checkBodyHit2(_newHeadCoordinates);
-    if (this.checkFoodField(_newHeadCoordinates)) { /* updateScore */ }
-
+    this.checkBodyHit(_newHeadCoordinates);
+    if (this.checkFoodField(_newHeadCoordinates)) {
+      // update Score;
+      this.drawFood();
+    }
     const afterHeadBodyType = this.checkFoodField(this._snake.headPosition.coordinates) ? BODY_AND_FOOD_FIELD: MARKED_FIELD;
     this.setField(
       this._snake.headPosition.coordinates,
@@ -322,43 +320,23 @@ export class Playground {
     this.markField(this._snake.headPosition.coordinates, HEAD_FIELD);
 
     // tail
-    if (this.checkFoodField(this._snake.tailPosition.coordinates)) {
-      console.log('fooooooddd');
+    if (this.checkBodyAndFoodField(this._snake.tailPosition.coordinates)) {
+      this.setField(
+        this._snake.tailPosition.coordinates,
+        new SnakeBodyField(
+          this._snake.tailPosition.coordinates, MARKED_FIELD,
+          this._snake.tailPosition.direction
+        )
+      )
+      this._snake.length = this._snake.length + 1;
     } else {
-      this.setField(this._snake.tailPosition.coordinates, new Field(this._snake.tailPosition.coordinates))
-      this.markField(this._snake.tailPosition.coordinates, UNMARKED_FIELD);
       const tailField = <SnakeBodyField>this.getField(this._snake.tailPosition.coordinates);
       const _newTailCoordinates = this.makeShiftedCoordinates(this._snake.tailPosition.coordinates, tailField.direction);
-      const newTailField = <SnakeBodyField>this.getField(this._snake.tailPosition.coordinates);
-      this._snake.tailPosition = new SnakeBodyField(_newTailCoordinates, MARKED_FIELD, newTailField.direction)
+      const newTailField = <SnakeBodyField>this.getField(_newTailCoordinates);
+      this.setField(this._snake.tailPosition.coordinates, new Field(this._snake.tailPosition.coordinates))
+      this.markField(this._snake.tailPosition.coordinates, UNMARKED_FIELD);
+      this._snake.tailPosition = new SnakeBodyField(_newTailCoordinates, MARKED_FIELD, newTailField.direction);
     }
-    const _newTailCoordinates = this.makeShiftedCoordinates(this._snake.tailPosition.coordinates, this._snake.tailPosition.direction);
-    
-/*
-    // moveTail
-    const tailPosition = this._snake.tailPosition;
-    this._fields[tailPosition.coordinates.y][tailPosition.coordinates.x] = new Field(tailPosition.coordinates); // get tail position and unmark it, leave no traces behind
-    let [shiftX, shiftY] = this.getCoordinateShiftFunctions(tailPosition.direction); 
-    let [newX, newY] = [shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y)];
-    const newTailCoordinates = new Coordinates(shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y));
-    const newField = <SnakeBodyField>this._fields[newY][newX];
-    this._snake.tailPosition = new SnakeBodyField(newTailCoordinates, MARKED_FIELD, newField.direction) // getShift functions, new coordinates, make nes tail Position
-    this.markField(tailPosition.coordinates, UNMARKED_FIELD);
- 
-    // moveHead
-    const headPosition = this._snake.headPosition;
-    this._fields[headPosition.coordinates.y][headPosition.coordinates.x] = new SnakeBodyField(headPosition.coordinates, MARKED_FIELD, this._snake.direction);
-    [shiftX, shiftY] = this.getCoordinateShiftFunctions(this._snake.direction);
-    [newX, newY] = [shiftX(headPosition.coordinates.x), shiftY(headPosition.coordinates.y)];
-    this.checkBorders(newX, newY);
-    this.checkBodyHit(newX, newY);
-    const newHeadCoordinates = new Coordinates(newX, newY);
-    this._snake.headPosition = new SnakeBodyField(newHeadCoordinates, this._snake.direction);
-
-    this.markField(tailPosition.coordinates, UNMARKED_FIELD);
-    this.markField(headPosition.coordinates, MARKED_FIELD);
-    this.markField(this._snake.headPosition.coordinates, HEAD_FIELD);
-*/
   }
 
   makeShiftedCoordinates(coordinates: Coordinates, direction: DirectionsType) {
@@ -379,12 +357,6 @@ export class Playground {
     )
   }
 
-  checkBorders(x:number , y: number) {
-    if (x < 0 || x > this._playgroundSize-1 || y < 0 || y > this._playgroundSize-1) {
-      throw new Error("Out of borders");
-    }
-  }
-
   checkBorderHit (coordinates: Coordinates) {
     if (coordinates.x < 0 || coordinates.x > this._playgroundSize-1 || coordinates.y < 0 || coordinates.x > this._playgroundSize) {
       console.log("You hit the border!");
@@ -392,7 +364,7 @@ export class Playground {
     }
   }
 
-  checkBodyHit2(coordinates: Coordinates) {
+  checkBodyHit(coordinates: Coordinates) {
     if (this._fields[coordinates.y][coordinates.x] instanceof SnakeBodyField) {
       console.log("You hit yourself!");
       throw new Error("You hit yourself!");
@@ -401,17 +373,19 @@ export class Playground {
 
   checkFoodField(coordinates: Coordinates) {
     const field = this.getField(coordinates);
-    if (field instanceof FoodField || (field instanceof SnakeBodyField && field.bodyType===BODY_AND_FOOD_FIELD)) {
+    if (field instanceof FoodField) {
       return true;
     } else {
       return false;
     }
   }
 
-  checkBodyHit(x: number, y: number) {
-    const field = this._fields[y][x];
-    if (field instanceof SnakeBodyField) {
-      throw new Error("You hit yourself");
+  checkBodyAndFoodField(coordinates: Coordinates) {
+    const field = <SnakeBodyField>this.getField(coordinates);
+    if (field.bodyType === BODY_AND_FOOD_FIELD) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -489,22 +463,18 @@ export class GameRunner {
 
   enableGameControls () {
     document.addEventListener('keypress', this.spaceKeyListener);
-    console.log('Game Controls Enabled!');
   }
 
   disableGameControls () {
     document.removeEventListener('keypress', this.spaceKeyListener);
-    console.log('Game Controls Disabled!');
   }
 
   enableSnakeControls () {
     document.addEventListener('keypress', this.controlKeysListener);
-    console.log('Snake Controls Enabled!');
   }
 
   disableSnakeControls () {
     document.removeEventListener('keypress', this.controlKeysListener);
-    console.log('Game Controls Disabled!');
   }
 
   get timeSlicePeriod() {

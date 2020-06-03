@@ -18,6 +18,7 @@ module.exports=class Router {
         readFile(
           path.join(__dirname, "public", pathname),
           (data) => {
+            console.log(req.headers.accept)
             res.setHeader("Content-Type", req.headers.accept.split(",")[0]);
             res.writeHead(200);
             res.end(data);
