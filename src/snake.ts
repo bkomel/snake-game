@@ -9,13 +9,106 @@ export const DOWN = "DOWN";
 export const LEFT = "LEFT";
 export const RIGHT = "RIGHT";
 
-type DirectionsType = "UP" | "DOWN" | "LEFT" | "RIGHT";
+type DirectionsType = "UP" | "DOWN" | "LEFT" | "RIGHT" | "NONE";
+
+interface ICoordinates {
+  x: number
+  y: number
+}
+
+class Coordinates implements ICoordinates {
+
+  private _x: number;
+  private _y: number;
+
+  constructor(x: number=0, y: number=0) {
+    this._x = x;
+    this._y = y;
+  }
+
+  get x () {
+    return this._x;
+  }
+
+  set x (x: number) {
+    this._x = x;
+  }
+
+  get y () {
+    return this._y;
+  }
+
+  set y (y: number) {
+    this._y = y;
+  }
+  
+}
+
+interface IField {
+  coordinates: Coordinates
+}
+
+interface ISnakeBodyField extends IField {
+  direction: DirectionsType
+  bodyType: any
+}
+
+class SnakeBodyField implements ISnakeBodyField {
+
+  private _coordinates: Coordinates;
+  private _bodyType: any;
+  private _direction: DirectionsType;
+
+  constructor (
+    coordinates: Coordinates = new Coordinates(),
+    bodyType: any = null,
+    direction: DirectionsType = "NONE"
+  ) {
+
+  }
+
+  get coordinates () {
+    return this._coordinates;
+  }
+
+  get bodyType () {
+    return this._bodyType;
+  }
+
+  get direction () {
+    return this._direction;
+  }
+
+}
+
+interface IFoodField {
+  coordinates: Coordinates
+  foodType: any
+}
+
+class FoodField implements IFoodField {
+
+  private _coordinates: Coordinates
+  private _foodType: any
+
+  constructor (
+    coordinates: ICoordinates,
+    foodType: any
+  ) {}
+
+  get coordinates () {
+    return this._coordinates;
+  }
+
+  get foodType () {
+    return this._foodType;
+  }
+}
 
 class Field {
 
   private _x: number;
   private _y: number;
-  private _marked: boolean = false;
   private _direction: DirectionsType;
 
   constructor (x: number = 0, y: number = 0, direction: DirectionsType=RIGHT) {
@@ -47,6 +140,12 @@ export class Snake {
     Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
     this._direction
   );
+  private _headPosition2: SnakeBodyField = new SnakeBodyField(
+    new Coordinates(
+      Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
+      Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length )
+    ), HEAD_FIELD
+  )
   private _tailPosition: Field;
 
   get length() {
@@ -81,6 +180,10 @@ export class Snake {
     this._direction = direction;
   }
 
+}
+
+interface IPlayground {
+  //
 }
 
 export class Playground {
