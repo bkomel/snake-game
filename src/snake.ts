@@ -2,7 +2,9 @@
 const PLAYGROUND_SIZE = 20;
 const MARKED_FIELD = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
 const UNMARKED_FIELD = "height: 20px; width: 20px; background-color: silver;";
-const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-radius: 4px";
+const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-radius: 2px";
+const FOOD_FIELD = "height: 20px; width: 20px; background-color: red; border-radius: 4px";
+const BODY_AND_FOOD_FIELD = "height: 20px; width: 20px; background-color: #444; border-radius: 2px"
 const INITIAL_SNAKE_LENGTH: number = 3;
 export const UP = "UP";
 export const DOWN = "DOWN";
@@ -225,6 +227,7 @@ export class Playground {
     this._table.remove();
     this.drawPlayground();
     this.drawSnake();
+    this.drawFood();
   }
 
   markField(coordinates: Coordinates, type: string) {
@@ -268,7 +271,14 @@ export class Playground {
   }
 
   drawFood() {
-    //
+    let coordinates: Coordinates;
+    do {
+      coordinates = new Coordinates(
+        Math.floor(Math.random() * (this._playgroundSize - 1) ),
+        Math.floor(Math.random() * (this._playgroundSize - 1) )
+      )
+    } while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
+    this.markField(coordinates, FOOD_FIELD);
   }
 
   getCoordinateShiftFunctions(direction: DirectionsType, negative: boolean=false, shift: number=1): any[] {
@@ -286,17 +296,45 @@ export class Playground {
     }
   }
 
+  getField(coordinates: Coordinates): Field | ISnakeBodyField | IFoodField {
+    return this._fields[coordinates.y][coordinates.x];
+  }
+
+  setField(coordinates: Coordinates, field: (SnakeBodyField | Field)) {
+    this._fields[coordinates.y][coordinates.x] = field;
+  }
+
   moveSnake() {
-    // unmarkTailPosition if tail is not on the food point
-    // find new TailPosition
-    // setTailPosition
-    // find new HeadPosition
-    // setHeadPosition
-    // markHeadPosition
 
-    // checkConstraints
-    // checkFood
+    // head
+    const _newHeadCoordinates = this.makeShiftedCoordinates(this._snake.headPosition.coordinates, this._snake.direction);
+    this.checkBorderHit(_newHeadCoordinates);
+    this.checkBodyHit2(_newHeadCoordinates);
+    if (this.checkFoodField(_newHeadCoordinates)) { /* updateScore */ }
 
+    const afterHeadBodyType = this.checkFoodField(this._snake.headPosition.coordinates) ? BODY_AND_FOOD_FIELD: MARKED_FIELD;
+    this.setField(
+      this._snake.headPosition.coordinates,
+      new SnakeBodyField(this._snake.headPosition.coordinates, afterHeadBodyType, this._snake.direction)
+    );
+    this.markField(this._snake.headPosition.coordinates, afterHeadBodyType);
+    this._snake.headPosition = new SnakeBodyField(_newHeadCoordinates, HEAD_FIELD, this._snake.direction);  // this._snake.headPosition could just be headCoordinates
+    this.markField(this._snake.headPosition.coordinates, HEAD_FIELD);
+
+    // tail
+    if (this.checkFoodField(this._snake.tailPosition.coordinates)) {
+      console.log('fooooooddd');
+    } else {
+      this.setField(this._snake.tailPosition.coordinates, new Field(this._snake.tailPosition.coordinates))
+      this.markField(this._snake.tailPosition.coordinates, UNMARKED_FIELD);
+      const tailField = <SnakeBodyField>this.getField(this._snake.tailPosition.coordinates);
+      const _newTailCoordinates = this.makeShiftedCoordinates(this._snake.tailPosition.coordinates, tailField.direction);
+      const newTailField = <SnakeBodyField>this.getField(this._snake.tailPosition.coordinates);
+      this._snake.tailPosition = new SnakeBodyField(_newTailCoordinates, MARKED_FIELD, newTailField.direction)
+    }
+    const _newTailCoordinates = this.makeShiftedCoordinates(this._snake.tailPosition.coordinates, this._snake.tailPosition.direction);
+    
+/*
     // moveTail
     const tailPosition = this._snake.tailPosition;
     this._fields[tailPosition.coordinates.y][tailPosition.coordinates.x] = new Field(tailPosition.coordinates); // get tail position and unmark it, leave no traces behind
@@ -305,6 +343,7 @@ export class Playground {
     const newTailCoordinates = new Coordinates(shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y));
     const newField = <SnakeBodyField>this._fields[newY][newX];
     this._snake.tailPosition = new SnakeBodyField(newTailCoordinates, MARKED_FIELD, newField.direction) // getShift functions, new coordinates, make nes tail Position
+    this.markField(tailPosition.coordinates, UNMARKED_FIELD);
  
     // moveHead
     const headPosition = this._snake.headPosition;
@@ -315,14 +354,57 @@ export class Playground {
     this.checkBodyHit(newX, newY);
     const newHeadCoordinates = new Coordinates(newX, newY);
     this._snake.headPosition = new SnakeBodyField(newHeadCoordinates, this._snake.direction);
+
     this.markField(tailPosition.coordinates, UNMARKED_FIELD);
     this.markField(headPosition.coordinates, MARKED_FIELD);
     this.markField(this._snake.headPosition.coordinates, HEAD_FIELD);
+*/
+  }
+
+  makeShiftedCoordinates(coordinates: Coordinates, direction: DirectionsType) {
+    let [shiftX, shiftY] = this.getCoordinateShiftFunctions(direction);
+    return new Coordinates(
+      shiftX(coordinates.x),
+      shiftY(coordinates.y)
+    )
+  }
+
+  makeNewTailPosition(tailPosition: SnakeBodyField) {
+    let [shiftX, shiftY] = this.getCoordinateShiftFunctions(tailPosition.direction);
+    let [newX, newY] = [shiftX(tailPosition.coordinates.x), shiftY(tailPosition.coordinates.y)];
+    return new SnakeBodyField(
+      new Coordinates(
+        shiftX(tailPosition.coordinates.x)
+      )
+    )
   }
 
   checkBorders(x:number , y: number) {
     if (x < 0 || x > this._playgroundSize-1 || y < 0 || y > this._playgroundSize-1) {
       throw new Error("Out of borders");
+    }
+  }
+
+  checkBorderHit (coordinates: Coordinates) {
+    if (coordinates.x < 0 || coordinates.x > this._playgroundSize-1 || coordinates.y < 0 || coordinates.x > this._playgroundSize) {
+      console.log("You hit the border!");
+      throw new Error("You hit the border!");
+    }
+  }
+
+  checkBodyHit2(coordinates: Coordinates) {
+    if (this._fields[coordinates.y][coordinates.x] instanceof SnakeBodyField) {
+      console.log("You hit yourself!");
+      throw new Error("You hit yourself!");
+    }
+  }
+
+  checkFoodField(coordinates: Coordinates) {
+    const field = this.getField(coordinates);
+    if (field instanceof FoodField || (field instanceof SnakeBodyField && field.bodyType===BODY_AND_FOOD_FIELD)) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -407,18 +489,22 @@ export class GameRunner {
 
   enableGameControls () {
     document.addEventListener('keypress', this.spaceKeyListener);
+    console.log('Game Controls Enabled!');
   }
 
   disableGameControls () {
     document.removeEventListener('keypress', this.spaceKeyListener);
+    console.log('Game Controls Disabled!');
   }
 
   enableSnakeControls () {
     document.addEventListener('keypress', this.controlKeysListener);
+    console.log('Snake Controls Enabled!');
   }
 
   disableSnakeControls () {
     document.removeEventListener('keypress', this.controlKeysListener);
+    console.log('Game Controls Disabled!');
   }
 
   get timeSlicePeriod() {

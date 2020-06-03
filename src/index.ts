@@ -7,6 +7,8 @@ const gameRunner = new GameRunner(playground);
 
 playground.drawPlayground();
 playground.drawSnake();
+playground.drawFood();
+console.log('hh')
 gameRunner.enableGameControls();
 
 
