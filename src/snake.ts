@@ -6,6 +6,17 @@ const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-r
 const FOOD_FIELD = "height: 20px; width: 20px; background-color: red; border-radius: 15px";
 const BODY_AND_FOOD_FIELD = "height: 20px; width: 20px; background-color: #444; border-radius: 2px"
 const INITIAL_SNAKE_LENGTH: number = 3;
+
+const EMPTY_FIELD = "height: 20px; width: 20px; background-color: rgb(170, 170, 170);"; // change #aaa to silver
+
+const SNAKE_HEAD = "height: 20px; width: 20px; background-color: black; border-radius: 2px";
+const SNAKE_BODY = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
+const SNAKE_TAIL = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
+const SNAKE_BODY_AND_FOOD = "";
+
+type SnakeBodyType = typeof SNAKE_HEAD | typeof SNAKE_BODY | typeof SNAKE_BODY_AND_FOOD | typeof SNAKE_TAIL;
+type FoodType = typeof FOOD_FIELD;
+
 export const UP = "UP";
 export const DOWN = "DOWN";
 export const LEFT = "LEFT";
@@ -44,6 +55,90 @@ class Coordinates implements ICoordinates {
     this._y = y;
   }
   
+}
+
+interface ISnakeBodyPart {
+  coordinates: Coordinates
+  direction: DirectionsType
+  type: SnakeBodyType
+}
+
+class SnakeBodyPart implements ISnakeBodyPart {
+
+  private _coordinates: Coordinates;
+  private _direction: DirectionsType;
+  private _type: SnakeBodyType;
+
+  constructor (
+    coordinates: Coordinates,
+    direction: DirectionsType,
+    type: SnakeBodyType
+  ) {
+    this._coordinates = coordinates;
+    this._direction = direction;
+    this._type = type;
+  }
+
+  get coordinates(){
+    return this._coordinates;
+  }
+
+  set coordinates(coordinates: Coordinates) {
+    this._coordinates = coordinates;
+  }
+
+  get direction(){
+    return this._direction;
+  }
+
+  set direction(direction: DirectionsType) {
+    this._direction = direction;
+  }
+
+  get type(){
+    return this._type;
+  }
+
+  set type(type: SnakeBodyType) {
+    this._type = type;
+  }
+
+}
+
+interface IFood {
+  coordinates: Coordinates
+  type: FoodType
+}
+
+class Food implements IFood {
+
+  private _coordinates: Coordinates
+  private _type: FoodType
+
+  constructor (
+    coordinates: Coordinates,
+    type: FoodType
+  ) {
+    this._coordinates = coordinates;
+    this._type = type;
+  }
+
+  get coordinates(){
+    return this._coordinates;
+  }
+
+  set coordinates(coordinates: Coordinates) {
+    this._coordinates = coordinates;
+  }
+
+  get type(){
+    return this._type;
+  }
+
+  set type(type: FoodType) {
+    this._type = type;
+  }
+
 }
 
 interface IField {
@@ -133,6 +228,18 @@ export class Snake implements ISnake{
   )
   private _tailPosition: SnakeBodyField;
 
+  private _head: SnakeBodyPart = new SnakeBodyPart(
+    new Coordinates(
+      Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length ),
+      Math.floor( Math.random() * (PLAYGROUND_SIZE - 2*this._length) + this._length )
+    ),
+    this._direction,
+    SNAKE_HEAD
+  )
+  private _tail: SnakeBodyPart;
+  private _body: SnakeBodyPart[] = [this._head];
+
+
   get length() {
     return this._length;
   }
@@ -202,12 +309,14 @@ export class Playground {
   drawPlayground() {
     this._table = document.createElement('table');
     const tableBody = document.createElement('tbody');
-    for (const row in this._fields) {
+    for (const row in Array(this._playgroundSize).fill(0)) {
       const tableRow = document.createElement('tr');
-      for (const col in this._fields[row]) {
+      for (const col in Array(this._playgroundSize).fill(0)) {
         const tableData = document.createElement('td');
-        tableData.setAttribute("style", "height: 20px; width: 20px; background-color: silver;");
+        tableData.setAttribute("style", EMPTY_FIELD);
         tableData.setAttribute("id", col+"-"+row);
+        tableData.setAttribute("field-type", EMPTY_FIELD);
+        tableData.append(col+"-"+row);
         tableRow.appendChild(tableData);
       }
       tableBody.appendChild(tableRow);
@@ -272,7 +381,11 @@ export class Playground {
         Math.floor(Math.random() * (this._playgroundSize - 1) ),
         Math.floor(Math.random() * (this._playgroundSize - 1) )
       )
-    } while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
+      console.log(document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText)
+      console.log(EMPTY_FIELD);
+      console.log(document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText === EMPTY_FIELD)
+    //} while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
+  } while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
     this.setField(coordinates, new FoodField(coordinates, FOOD_FIELD));
     this.markField(coordinates, FOOD_FIELD);
   }
