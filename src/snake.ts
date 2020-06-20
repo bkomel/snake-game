@@ -3,18 +3,20 @@ const PLAYGROUND_SIZE = 20;
 const MARKED_FIELD = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
 const UNMARKED_FIELD = "height: 20px; width: 20px; background-color: silver;";
 const HEAD_FIELD = "height: 20px; width: 20px; background-color: black; border-radius: 2px";
-const FOOD_FIELD = "height: 20px; width: 20px; background-color: red; border-radius: 15px";
+const FOOD_FIELD = "height: 20px; width: 20px; background-color: rgb(255, 0, 0); border-radius: 15px;";
 const BODY_AND_FOOD_FIELD = "height: 20px; width: 20px; background-color: #444; border-radius: 2px"
 const INITIAL_SNAKE_LENGTH: number = 3;
 
 const EMPTY_FIELD = "height: 20px; width: 20px; background-color: rgb(170, 170, 170);"; // change #aaa to silver
 
-const SNAKE_HEAD = "height: 20px; width: 20px; background-color: black; border-radius: 2px";
-const SNAKE_BODY = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
+const SNAKE_HEAD = "height: 20px; width: 20px; background-color: rgb(64, 64, 64); border-radius: 2px";
+const SNAKE_HEAD_AND_FOOD = "height: 20px; width: 20px; background-color: rgb(0, 0, 0); border-radius: 2px";
+const SNAKE_BODY = "height: 20px; width: 20px; background-color: rgb(126, 126, 126); border-radius: 4px;";
 const SNAKE_TAIL = "height: 20px; width: 20px; background-color: #777; border-radius: 4px";
-const SNAKE_BODY_AND_FOOD = "";
+const SNAKE_BODY_AND_FOOD = "height: 20px; width: 20px; background-color: rgb(64, 64, 64); border-radius: 4px";
 
-type SnakeBodyType = typeof SNAKE_HEAD | typeof SNAKE_BODY | typeof SNAKE_BODY_AND_FOOD | typeof SNAKE_TAIL;
+
+type SnakeBodyType = typeof SNAKE_HEAD | typeof SNAKE_HEAD_AND_FOOD | typeof SNAKE_BODY | typeof SNAKE_BODY_AND_FOOD | typeof SNAKE_TAIL;
 type FoodType = typeof FOOD_FIELD;
 
 export const UP = "UP";
@@ -61,6 +63,7 @@ interface ISnakeBodyPart {
   coordinates: Coordinates
   direction: DirectionsType
   type: SnakeBodyType
+  containsFood: boolean
 }
 
 class SnakeBodyPart implements ISnakeBodyPart {
@@ -68,15 +71,18 @@ class SnakeBodyPart implements ISnakeBodyPart {
   private _coordinates: Coordinates;
   private _direction: DirectionsType;
   private _type: SnakeBodyType;
+  private _containsFood: boolean;
 
   constructor (
     coordinates: Coordinates,
     direction: DirectionsType,
-    type: SnakeBodyType
+    type: SnakeBodyType,
+    containsFood: boolean = false
   ) {
     this._coordinates = coordinates;
     this._direction = direction;
     this._type = type;
+    this._containsFood = containsFood
   }
 
   get coordinates(){
@@ -101,6 +107,10 @@ class SnakeBodyPart implements ISnakeBodyPart {
 
   set type(type: SnakeBodyType) {
     this._type = type;
+  }
+
+  get containsFood() {
+    return this._containsFood;
   }
 
 }
@@ -236,8 +246,7 @@ export class Snake implements ISnake{
     this._direction,
     SNAKE_HEAD
   )
-  private _tail: SnakeBodyPart;
-  private _body: SnakeBodyPart[] = [this._head];
+  private _body: SnakeBodyPart[] = [];
 
 
   get length() {
@@ -270,6 +279,22 @@ export class Snake implements ISnake{
 
   set direction (direction: DirectionsType) {
     this._direction = direction;
+  }
+
+  set head (head: SnakeBodyPart) {
+    this._head = head;
+  }
+
+  get head () {
+    return this._head;
+  }
+
+  set body (body: SnakeBodyPart[]) {
+    this._body = body;
+  }
+
+  get body () {
+    return this._body;
   }
 
 }
@@ -316,23 +341,23 @@ export class Playground {
         tableData.setAttribute("style", EMPTY_FIELD);
         tableData.setAttribute("id", col+"-"+row);
         tableData.setAttribute("field-type", EMPTY_FIELD);
-        tableData.append(col+"-"+row);
+        // tableData.append(col+"-"+row);
         tableRow.appendChild(tableData);
       }
       tableBody.appendChild(tableRow);
     }
     this._table.appendChild(tableBody);
-    this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+    this._table.setAttribute("style", "margin: 0 auto; border: 2px solid; font-size: 6px;");
     this._playgroundDiv.appendChild(this._table);
   }
 
   resetPlayground() {
     this._snake = new Snake();
-    this._fields = this.initializeFields();
+    //this._fields = this.initializeFields();
     this._table.remove();
     this.drawPlayground();
-    this.drawSnake();
-    this.drawFood();
+    this.drawSnake2();
+    this.drawFood2();
   }
 
   markField(coordinates: Coordinates, type: string) {
@@ -340,53 +365,44 @@ export class Playground {
     .setAttribute("style", type);
   }
 
-  drawSnake() {
-    // head
-    const headCoordinates = this._snake.headPosition.coordinates;
-    this.markField(headCoordinates, HEAD_FIELD);
-    this._fields[headCoordinates.y][headCoordinates.x] = new SnakeBodyField(headCoordinates, HEAD_FIELD, this._snake.direction);
-
-    // body & tail
-    let shiftX, shiftY, field;
+  drawSnake2() {
+    this.markField(this._snake.head.coordinates, this._snake.head.type);
+    let shiftX, shiftY, snakeBodyPart;
     for (let i = 1; i < this._snake.length; i++) {
-      [shiftX, shiftY] = this.getCoordinateShiftFunctions(this._snake.direction, true, i);
-      const bodyPartCoordinates = new Coordinates(shiftX(headCoordinates.x), shiftY(headCoordinates.y));
-      field = new SnakeBodyField( bodyPartCoordinates, MARKED_FIELD, this._snake.direction );
-      this.markField(field.coordinates, MARKED_FIELD);
-      this._fields[field.coordinates.y][field.coordinates.x] = field;
+      [shiftX, shiftY]=this.getCoordinateShiftFunctions(this._snake.direction, true, i);
+      snakeBodyPart = new SnakeBodyPart(new Coordinates(
+        shiftX(this._snake.head.coordinates.x),
+        shiftY(this._snake.head.coordinates.y)
+      ), this._snake.direction, SNAKE_BODY);
+      this._snake.body = [...this._snake.body, snakeBodyPart];
+      this.markField(snakeBodyPart.coordinates, snakeBodyPart.type);
     }
-    this._snake.tailPosition = field;
   }
 
   flashTableBorder() {
     let i = 5;
     let interval = setInterval(() => {
       if (i%2) {
-        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid red");
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid red; font-size: 6px;");
       } else {
-        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid; font-size: 6px;");
       }
       if (i<0) {
-        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid");
+        this._table.setAttribute("style", "margin: 0 auto; border: 2px solid; font-size: 6px;");
         clearInterval(interval);
       }
       i--;
     }, 300)
   }
 
-  drawFood() {
+  drawFood2 () {
     let coordinates: Coordinates;
     do {
       coordinates = new Coordinates(
-        Math.floor(Math.random() * (this._playgroundSize - 1) ),
-        Math.floor(Math.random() * (this._playgroundSize - 1) )
+        Math.floor( Math.random() * (this._playgroundSize - 1) ),
+        Math.floor( Math.random() * (this._playgroundSize - 1) )
       )
-      console.log(document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText)
-      console.log(EMPTY_FIELD);
-      console.log(document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText === EMPTY_FIELD)
-    //} while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
-  } while (this._fields[coordinates.y][coordinates.x] !instanceof SnakeBodyField)
-    this.setField(coordinates, new FoodField(coordinates, FOOD_FIELD));
+    } while (document.getElementById(coordinates.x+"-"+coordinates.y).getAttribute("style") !== EMPTY_FIELD)
     this.markField(coordinates, FOOD_FIELD);
   }
 
@@ -411,6 +427,42 @@ export class Playground {
 
   setField(coordinates: Coordinates, field: (SnakeBodyField | Field)) {
     this._fields[coordinates.y][coordinates.x] = field;
+  }
+
+  moveSnake2() {
+    // head
+    const newHeadCoordinates = this.makeShiftedCoordinates(this._snake.head.coordinates, this._snake.direction);
+    this.checkBorderHit(newHeadCoordinates);
+    this.checkBodyHit2(newHeadCoordinates);
+
+    let headType: SnakeBodyType = SNAKE_HEAD;
+    let neckType: SnakeBodyType = this._snake.head.type === SNAKE_HEAD ? SNAKE_BODY: SNAKE_BODY_AND_FOOD;
+    if (this.checkFoodHit(newHeadCoordinates)) {
+      // updateScore
+      headType = SNAKE_HEAD_AND_FOOD;
+      this.drawFood2();
+    }
+
+    const snakeBody = [
+      new SnakeBodyPart(this._snake.head.coordinates, this._snake.direction, neckType),
+      ...this._snake.body
+    ];
+    this.markField(this._snake.head.coordinates, neckType);
+
+    // tail
+    const tail = snakeBody[snakeBody.length - 1];
+    if (snakeBody[snakeBody.length - 1].type === SNAKE_BODY_AND_FOOD) {
+      snakeBody[snakeBody.length - 1] = new SnakeBodyPart(tail.coordinates, tail.direction, SNAKE_BODY);
+      this.markField(tail.coordinates, SNAKE_BODY);
+    } else {
+      snakeBody.pop();
+      this.markField(tail.coordinates, EMPTY_FIELD);
+    }
+
+    this._snake.body = snakeBody;    
+
+    this._snake.head = new SnakeBodyPart(newHeadCoordinates, this._snake.direction, headType);
+    this.markField(this._snake.head.coordinates, this._snake.head.type);
   }
 
   moveSnake() {
@@ -474,6 +526,22 @@ export class Playground {
     if (coordinates.x < 0 || coordinates.x > this._playgroundSize-1 || coordinates.y < 0 || coordinates.x > this._playgroundSize) {
       console.log("You hit the border!");
       throw new Error("You hit the border!");
+    }
+  }
+
+  checkBodyHit2 (coordinates: Coordinates) {
+    const fieldStyle = document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText;
+    if (fieldStyle === SNAKE_BODY || fieldStyle === SNAKE_BODY_AND_FOOD) {
+      console.log("You hit yourself");
+      throw new Error("You hit yourself");
+    }
+  }
+
+  checkFoodHit (coordinates: Coordinates) {
+    if (document.getElementById(coordinates.x+"-"+coordinates.y).style.cssText === FOOD_FIELD) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -556,19 +624,28 @@ export class GameRunner {
   controlKeysListener = (ev: KeyboardEvent) => {
     switch(ev.keyCode) {
       case 105: {
-        this._playground.snake.direction = UP;
+        if (this._playground.snake.direction !== DOWN) {
+          this._playground.snake.direction = UP;
+        }
         break;
       }
       case 107: {
-        this._playground.snake.direction = DOWN;
+        if (this._playground.snake.direction !== UP) {
+          this._playground.snake.direction = DOWN;
+        }
         break;
       }
       case 106: {
-        this._playground.snake.direction = LEFT;
+        if (this._playground.snake.direction !== RIGHT) {
+          this._playground.snake.direction = LEFT;
+        }
         break;
       }
       case 108: {
-        this._playground.snake.direction = RIGHT;
+
+        if (this._playground.snake.direction !== LEFT) {
+          this._playground.snake.direction = RIGHT;
+        }
         break;
       }
     }
@@ -601,7 +678,7 @@ export class GameRunner {
   timeSlice (): any {
     if (this._gameRunning) {
       try {
-        this._playground.moveSnake()
+        this._playground.moveSnake2()
       } catch (error) {
         this.gameover();
       }
