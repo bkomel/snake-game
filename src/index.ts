@@ -6,9 +6,8 @@ const playground = new Playground(snake);
 const gameRunner = new GameRunner(playground);
 
 playground.drawPlayground();
-playground.drawSnake2();
-playground.drawFood2();
-console.log(snake);
+playground.drawSnake();
+playground.drawFood();
 gameRunner.enableGameControls();
 
 
