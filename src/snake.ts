@@ -396,6 +396,7 @@ export class GameRunner {
   }
 
   start() {
+    this.disablePlayerNameChanging();
     this.enableSnakeControls();
     this._gameRunning = true;
   }
@@ -408,6 +409,7 @@ export class GameRunner {
   reset() {
     this._playground.resetPlayground();
     this.enableGameControls();
+    this.enablePlayerNameChanging();
   }
 
   gameover() {
@@ -420,9 +422,9 @@ export class GameRunner {
     this._playground.flashTableBorder();
   }
 
-  spaceKeyListener = (ev: KeyboardEvent) => {
+  sKeyListener = (ev: KeyboardEvent) => {
     switch(ev.keyCode) {
-      case 32: {
+      case 115: {
         if (this.gameRunning) {
           this.pause();
         } else {
@@ -463,11 +465,11 @@ export class GameRunner {
   }
 
   enableGameControls () {
-    document.addEventListener('keypress', this.spaceKeyListener);
+    document.addEventListener('keypress', this.sKeyListener);
   }
 
   disableGameControls () {
-    document.removeEventListener('keypress', this.spaceKeyListener);
+    document.removeEventListener('keypress', this.sKeyListener);
   }
 
   enableSnakeControls () {
@@ -497,6 +499,7 @@ export class GameRunner {
   enterRandomPlayerName(ev: MouseEvent) {
     ev.preventDefault();
     (<HTMLInputElement>document.getElementById("nameInput")).value = this._player.makeRandomName();
+    document.getElementById("randomName").blur();
   }
 
   enableConfirmPlayerName() {
@@ -515,10 +518,17 @@ export class GameRunner {
     ev.preventDefault();
     this._player.name = (<HTMLInputElement>document.getElementById("nameInput")).value;
     this.showPlayerName();
+    document.getElementById("submitName").blur();
   }
+
   enablePlayerNameChanging () {
     this.enablePlayerRandomName();
     this.enableConfirmPlayerName();
+  }
+
+  disablePlayerNameChanging () {
+    this.disablePlayerRandomName();
+    this.disableConfirmPlayerName();
   }
 
   get timeSlicePeriod() {
