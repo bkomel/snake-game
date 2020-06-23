@@ -9,7 +9,29 @@
 <body class="fullscreen" style="background: rgb(170, 170, 170);">
   <div class="container">
     <h1 class="title" style="text-align: center;">Snake Game</h1>
+    <div id="greeting" style="text-align: center; margin: 0 auto;">
+    </div>    
     <div id="playground"></div>
+    <div style="text-align: center; margin: 0 auto;">
+      <h2>Score</h2>
+      <p id="score">d</p>
+      <h2>Chose name</h2>
+      <form>
+        <input id="nameInput" type="text" />
+        <button id="randomName">Random name</button>
+        <button id="submitName">Ok</button>
+      </form>
+      <h2>Controls</h2>
+      <table class="controls-table">
+        <tbody>
+          <tr><td>Play/Pause</td><td>Space bar</td></tr>
+          <tr><td>Up</td><td>I</td></tr>
+          <tr><td>Down</td><td>K</td></tr>
+          <tr><td>Right</td><td>L</td></tr>
+          <tr><td>Left</td><td>J</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <script src="js/bundle.js"></script>
 </body>

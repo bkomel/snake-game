@@ -1,3 +1,11 @@
 .container {
     font: black
 }
+
+.controls-table {
+    margin: 0 auto;
+}
+
+.controls-table, .controls-table td, .controls-table tr {
+    border: 1px solid;
+}

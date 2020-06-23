@@ -1,14 +1,20 @@
 
 import { GameRunner, Playground, Snake, UP, DOWN, LEFT, RIGHT } from './snake';
+import Score from './score';
+import { Player } from './player';
 
 const snake = new Snake();
-const playground = new Playground(snake);
-const gameRunner = new GameRunner(playground);
+const score = new Score(document.getElementById("score"));
+const player = new Player();
+const playground = new Playground(snake, score);
+const gameRunner = new GameRunner(playground, player);
 
 playground.drawPlayground();
 playground.drawSnake();
 playground.drawFood();
 gameRunner.enableGameControls();
+gameRunner.enablePlayerNameChanging();
+score.showScore();
 
 
 setInterval(

@@ -1,3 +1,5 @@
+import Score from "./score";
+import { Player } from "./player";
 
 const PLAYGROUND_SIZE = 20;
 const INITIAL_SNAKE_LENGTH: number = 3;
@@ -206,9 +208,11 @@ export class Playground {
   private _playgroundDiv: any = document.getElementById('playground');
   private _snake: Snake;
   private _table: HTMLElement;
+  private _score: Score;
 
-  constructor(snake: Snake) {
+  constructor(snake: Snake, score: Score) {
     this._snake = snake;
+    this._score = score;
   }
 
   get snake () {
@@ -238,6 +242,8 @@ export class Playground {
   resetPlayground() {
     this._snake = new Snake();
     this._table.remove();
+    this._score.reset();
+    this._score.showScore();
     this.drawPlayground();
     this.drawSnake();
     this.drawFood();
@@ -313,7 +319,8 @@ export class Playground {
     let headType: SnakeBodyType = SNAKE_HEAD;
     let neckType: SnakeBodyType = this._snake.head.type === SNAKE_HEAD ? SNAKE_BODY: SNAKE_BODY_AND_FOOD;
     if (this.checkFoodHit(newHeadCoordinates)) {
-      // updateScore
+      this._score.score = this._score.score += 1;
+      this._score.showScore();
       headType = SNAKE_HEAD_AND_FOOD;
       this.drawFood();
     }
@@ -378,11 +385,14 @@ export class GameRunner {
   private _timeSlicePeriod: number = TIME_SLICE_PERIOD; // miliseconds
   private _gameRunning: boolean = false;
   private _playground: Playground;
-  private _score: number;
+  private _player: Player;
 
-  constructor (playground: Playground) {
+  constructor (playground: Playground, player: Player) {
     this._playground = playground;
-    this._score = 0;
+    this._player = player;
+    this.showPlayerName();
+    this.enterRandomPlayerName = this.enterRandomPlayerName.bind(this);
+    this.changePlayerName = this.changePlayerName.bind(this);
   }
 
   start() {
@@ -466,6 +476,49 @@ export class GameRunner {
 
   disableSnakeControls () {
     document.removeEventListener('keypress', this.controlKeysListener);
+  }
+
+  showPlayerName () {
+    document.getElementById("greeting").innerHTML = `<h2>Hello, ${this._player.name}</h2>`;
+  }
+
+  enablePlayerRandomName() {
+    const element = document.getElementById("randomName");
+    element.removeAttribute("disabled");
+    element.addEventListener("click", this.enterRandomPlayerName);
+  }
+
+  disablePlayerRandomName() {
+    const element = document.getElementById("randomName");
+    element.setAttribute("disabled", "true");
+    element.removeEventListener("click", this.enterRandomPlayerName);
+  }
+
+  enterRandomPlayerName(ev: MouseEvent) {
+    ev.preventDefault();
+    (<HTMLInputElement>document.getElementById("nameInput")).value = this._player.makeRandomName();
+  }
+
+  enableConfirmPlayerName() {
+    const element = document.getElementById("submitName");
+    element.removeAttribute("disabled");
+    element.addEventListener("click", this.changePlayerName);
+  }
+
+  disableConfirmPlayerName() {
+    const element = document.getElementById("submitName");
+    element.setAttribute("disabled", "true");
+    element.removeEventListener("click", this.changePlayerName);
+  }
+
+  changePlayerName(ev: MouseEvent) {
+    ev.preventDefault();
+    this._player.name = (<HTMLInputElement>document.getElementById("nameInput")).value;
+    this.showPlayerName();
+  }
+  enablePlayerNameChanging () {
+    this.enablePlayerRandomName();
+    this.enableConfirmPlayerName();
   }
 
   get timeSlicePeriod() {
